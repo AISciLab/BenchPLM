@@ -6,7 +6,7 @@ We conducts a comprehensive benchmark of various protein language models (PLMs) 
 
 ## ⚙️ Benchmarking pipeline
 
-![pipeline](https://github.com/AISciLab/BenchPLM/blob/master/pipeline.png)
+![pipeline](pipeline.png)
 
 ## 📊 Dataset
 
@@ -24,9 +24,17 @@ We used the following public datasets for benchmarking:
         
         
         
+        
+        
+        
+        
         ), [code](https://huggingface.co/facebook/esm2_t36_3B_UR50D).
 
 - ESM3: Hayes T, Rao R, Akin H, et al. Simulating 500 million years of evolution with a language model[J]. Science, 2025, 387(6736): 850-858. [paper](https://www.science.org/doi/10.1126/science.ads0018
+        
+        
+        
+        
         
         
         
