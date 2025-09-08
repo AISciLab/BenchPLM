@@ -65,4 +65,4 @@ BenchPLM/
 
 ## 🚀 Getting Started
 
-For specific details, you can refer to [`./model`](), where each method includes a file that includes a README file and its implementation on the dataset.
+For specific details, you can refer to [`./model`](https://github.com/AISciLab/BenchPLM/tree/master/model), where each method includes a file that includes a README file and its implementation on the dataset.
