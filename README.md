@@ -61,6 +61,7 @@ BenchPLM/
 │   ├── ...             # Other models folder
 │   └── xTrimoPGLM/
 │
+├── data_utils.py  # For peptide–protein affinity data preprocessing, put it in the same directory where the script you want to run is located.
 ├── evaluation.py  # For multi-tag evaluation, put it in the same directory where the script you want to run is located.
 └── README.md
 ```
