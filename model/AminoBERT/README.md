@@ -21,6 +21,11 @@ Select a method based on your computational resources and performance requiremen
 ### Full Fine-Tuning
 
 This method updates **all** parameters of the model. It generally achieves the highest performance but requires more GPU resources and longer training times.
+- **Peptide–protein affinity Script:**
+
+  ```cmd
+  python ./full_fine-tuning/fft_regression.py
+  ```
 
 - **Binary Classification Script:**
 
@@ -37,7 +42,12 @@ This method updates **all** parameters of the model. It generally achieves the h
 ### LoRA (Low-Rank Adaptation) Fine-Tuning
 
 This method freezes most of the pre-trained model's parameters and only trains small, lightweight "adapter" layers. It is much faster and more memory-efficient, making it ideal for rapid experimentation.
+- **Peptide–protein affinity Script:**
 
+  ```cmd
+  python ./lora/lora_regression.py
+  ```
+  
 - **Binary Classification Script:**
 
   ```
