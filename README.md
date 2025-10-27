@@ -2,7 +2,7 @@
 
 ## 📜 Description
 
-We conducts a comprehensive benchmark of various protein language models (PLMs) for peptide property and function prediction. The goal is to assess the effectiveness of PLMs on tasks like toxicity, hemolytic activity, and multi-functional therapeutic peptide prediction. The models are evaluated under two fine-tuning strategies: Full Fine-Tuning and Low-Rank Adaptation (LoRA).
+We conducts a comprehensive benchmark of various protein language models (PLMs) for peptide property and function prediction. The goal is to assess the effectiveness of PLMs on tasks like peptide–protein affinity, toxicity, hemolytic activity, and multi-functional therapeutic peptide prediction. The models are evaluated under two fine-tuning strategies: Full Fine-Tuning and Low-Rank Adaptation (LoRA).
 
 ## ⚙️ Benchmarking pipeline
 
@@ -14,6 +14,7 @@ We used the following public datasets for benchmarking:
 
 | Dataset                                                      | Tasks            |
 | ------------------------------------------------------------ | ---- |
+| 🔗 [PPIKB](https://ppikb.duanlab.ac/) | Peptide–protein affinity |
 | ☠️ [ToxTeller](https://github.com/comics-asiis/ToxicPeptidePrediction/tree/main) | Peptide toxicity prediction             |
 | ☠️ [ToxinPred 3.0](https://webs.iiitd.edu.in/raghava/toxinpred3/) | Peptide toxicity prediction             |
 | 🩸 [HemoPI](https://webs.iiitd.edu.in/raghava/hemopi/) |Hemolytic Peptide identification            |
@@ -45,6 +46,7 @@ Make sure that your dataset is stored in the following structure so that scripts
 BenchPLM/
 ├── dataset/            # This catalog is designed to contain the datasets needed for model. Put it in the same directory where the script you want to run is located.
 │   ├── HemoPI/
+│   ├── PPIKB/
 │   ├── PrMFTP/
 │   ├── Toxinpred3.0/
 │   └── ToxTeller/
