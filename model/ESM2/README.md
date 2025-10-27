@@ -6,8 +6,8 @@ This guide provides instructions on how to train the model using either **Full F
 
 First, run the following command to install the necessary dependencies:
 
-```
-pip install torch pandas numpy scikit-learn transformers datasets peft
+```cmd
+$ pip install torch pandas numpy scikit-learn transformers datasets peft
 ```
 
 ------
@@ -19,23 +19,33 @@ Select a method based on your computational resources and performance requiremen
 ### Full Fine-Tuning
 
 This method updates **all** parameters of the model. It generally achieves the highest performance but requires more GPU resources and longer training times.
+- **Peptide–protein affinity Script:**
+
+  ```cmd
+  python ./full_fine-tuning/fft_regression.py
+  ```
 
 - **Binary Classification Script:**
 
-  ```
+  ```cmd
   python ./full_fine-tuning/fft_binary_classification.py --dataset <DATASET_NAME> [OPTIONS]
   ```
 
 - **Multi-class Macro/Micro Script:**
 
-  ```
+  ```cmd
   python ./full_fine-tuning/fft_macro_micro.py
   ```
 
 ### LoRA (Low-Rank Adaptation) Fine-Tuning
 
 This method freezes most of the pre-trained model's parameters and only trains small, lightweight "adapter" layers. It is much faster and more memory-efficient, making it ideal for rapid experimentation.
+- **Peptide–protein affinity Script:**
 
+  ```cmd
+  python ./lora/lora_regression.py
+  ```
+  
 - **Binary Classification Script:**
 
   ```
