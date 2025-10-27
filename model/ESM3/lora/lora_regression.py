@@ -1,0 +1,308 @@
+import os
+import sys
+os.environ['INFRA_PROVIDER'] = 'esm3'
+
+import pandas as pd
+import numpy as np
+import torch
+import torch.nn as nn
+import json
+from torch.utils.data import Dataset, DataLoader
+
+# from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
+from sklearn.metrics import (mean_squared_error, mean_absolute_error, r2_score, 
+                             median_absolute_error, mean_absolute_percentage_error, 
+                             explained_variance_score)
+from scipy.stats import pearsonr, spearmanr
+from transformers import Trainer, TrainingArguments, TrainerCallback,TrainerState,TrainerControl,EarlyStoppingCallback
+from esm.pretrained import load_local_model
+from esm.tokenization import EsmSequenceTokenizer
+import warnings
+warnings.filterwarnings('ignore')
+from data_utils import load_regression_data, get_max_lengths, prepare_sequences_for_model, normalize_regression_targets, denormalize_predictions
+from transformers.trainer_utils import get_last_checkpoint
+from peft import LoraConfig, get_peft_model
+
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+class PersistentEarlyStoppingCallback(EarlyStoppingCallback):
+    def __init__(self, early_stopping_patience: int = 1, early_stopping_threshold: float = 0.0):
+        super().__init__(early_stopping_patience, early_stopping_threshold)
+        self.state_file = "early_stopping_state.json"
+
+    def on_train_begin(self, args: TrainingArguments, state: TrainerState, control: TrainerControl, **kwargs):
+        super().on_train_begin(args, state, control, **kwargs)
+        
+        if args.resume_from_checkpoint:
+            state_path = os.path.join(args.resume_from_checkpoint, self.state_file)
+            if os.path.exists(state_path):
+                print(f"Loading early stopping state from {state_path}")
+                with open(state_path, "r") as f:
+                    saved_state = json.load(f)
+                self.early_stopping_patience_counter = saved_state.get("early_stopping_patience_counter", 0)
+                print(f"Restored patience counter to: {self.early_stopping_patience_counter}")
+            else:
+                print("No early stopping state file found. Starting with a fresh counter.")
+
+    def on_save(self, args: TrainingArguments, state: TrainerState, control: TrainerControl, **kwargs):
+        if state.is_world_process_zero:
+            checkpoint_folder = os.path.join(args.output_dir, f"checkpoint-{state.global_step}")
+            state_path = os.path.join(checkpoint_folder, self.state_file)
+        
+            current_state = {"early_stopping_patience_counter": self.early_stopping_patience_counter}
+            
+            print(f"Saving early stopping state to {state_path}. Current patience: {self.early_stopping_patience_counter}")
+            with open(state_path, "w") as f:
+                json.dump(current_state, f)
+
+class ESM3FinetuneRegressionModel(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.esm3 = load_local_model("esm3_sm_open_v1", device=device)
+        
+        lora_config = LoraConfig(
+            r=8,
+            lora_alpha=16,
+            target_modules=["plddt_projection", "structure_per_res_plddt_projection",
+                            "layernorm_qkv.1", "out_proj", "ffn.1", "ffn.3",
+                            "sequence_head.0", "sequence_head.3",
+                            "structure_head.0", "structure_head.3",
+                            "ss8_head.0", "ss8_head.3",
+                            "sasa_head.0", "sasa_head.3",
+                            "function_head.0", "function_head.3",
+                            "residue_head.0", "residue_head.3"
+                            ],
+            lora_dropout=0.05,
+            bias="none",
+            modules_to_save=["classifier"]
+        )
+
+        self.esm3 = get_peft_model(self.esm3, lora_config)
+        self.tokenizer = EsmSequenceTokenizer()
+
+        self.esm3.print_trainable_parameters()
+
+        self.regressor = nn.Sequential(
+            nn.Linear(1536 * 2, 512
+            nn.ReLU(),
+            nn.Dropout(0.1),
+            nn.Linear(512, 128),
+            nn.ReLU(),
+            nn.Dropout(0.1),
+            nn.Linear(128, 1)
+        )
+
+    def forward(self, protein_input_ids, protein_attention_mask, 
+                peptide_input_ids, peptide_attention_mask, labels=None):
+
+        protein_outputs = self.esm3(sequence_tokens=protein_input_ids)
+        protein_embeddings = protein_outputs.embeddings.mean(dim=1)
+
+        peptide_outputs = self.esm3(sequence_tokens=peptide_input_ids)
+        peptide_embeddings = peptide_outputs.embeddings.mean(dim=1)
+        
+        combined_features = torch.cat([protein_embeddings, peptide_embeddings], dim=1)
+
+        predictions = self.regressor(combined_features).squeeze()
+
+        loss = None
+        if labels is not None:
+            labels = labels.to(device)
+            loss = nn.MSELoss()(predictions, labels)
+
+        return {'loss': loss, 'logits': predictions} if loss is not None else {'logits': predictions}
+
+class ESMCollator:
+    def __init__(self, tokenizer):
+        self.tokenizer = tokenizer
+
+    def __call__(self, batch):
+        protein_sequences = [item['protein_sequence'] for item in batch]
+        peptide_sequences = [item['peptide_sequence'] for item in batch]
+        labels = torch.tensor([item['label'] for item in batch], dtype=torch.float)
+
+        protein_tokens = [self.tokenizer.encode(seq) for seq in protein_sequences]
+        peptide_tokens = [self.tokenizer.encode(seq) for seq in peptide_sequences]
+        
+        protein_max_len = max(len(t) for t in protein_tokens)
+        peptide_max_len = max(len(t) for t in peptide_tokens)
+
+        protein_input_ids = torch.full((len(protein_tokens), protein_max_len), 1, dtype=torch.long)  
+        protein_attention_mask = torch.zeros_like(protein_input_ids)
+
+        for i, t in enumerate(protein_tokens):
+            protein_input_ids[i, :len(t)] = torch.tensor(t)
+            protein_attention_mask[i, :len(t)] = 1
+
+        peptide_input_ids = torch.full((len(peptide_tokens), peptide_max_len), 1, dtype=torch.long)  
+        peptide_attention_mask = torch.zeros_like(peptide_input_ids)
+
+        for i, t in enumerate(peptide_tokens):
+            peptide_input_ids[i, :len(t)] = torch.tensor(t)
+            peptide_attention_mask[i, :len(t)] = 1
+
+        return {
+            'protein_input_ids': protein_input_ids,
+            'protein_attention_mask': protein_attention_mask,
+            'peptide_input_ids': peptide_input_ids,
+            'peptide_attention_mask': peptide_attention_mask,
+            'labels': labels
+        }
+
+class PPIDataset(Dataset):
+    def __init__(self, protein_seqs, peptide_seqs, targets):
+        self.protein_seqs = protein_seqs
+        self.peptide_seqs = peptide_seqs
+        self.targets = targets
+
+    def __len__(self):
+        return len(self.targets)
+
+    def __getitem__(self, idx):
+        return {
+            'protein_sequence': self.protein_seqs[idx],
+            'peptide_sequence': self.peptide_seqs[idx],
+            'label': self.targets[idx]
+        }
+
+def compute_metrics(eval_pred):
+    predictions, labels = eval_pred
+    
+    mse = mean_squared_error(labels, predictions)
+    rmse = np.sqrt(mse)
+    mae = mean_absolute_error(labels, predictions)
+    r2 = r2_score(labels, predictions)
+    pearson_corr, _ = pearsonr(labels, predictions)
+    spearman_corr, _ = spearmanr(labels, predictions)
+    medae = median_absolute_error(labels, predictions)
+    evs = explained_variance_score(labels, predictions)
+    mape = mean_absolute_percentage_error(labels, predictions)
+
+    return {
+        'mse': mse,
+        'rmse': rmse,
+        'mae': mae,
+        'medae': medae, 
+        'mape': mape,   
+        'r2': r2,
+        'evs': evs,     
+        'pearson': pearson_corr,
+        'spearman': spearman_corr
+    }
+
+def train_and_evaluate(run_id, learning_rate=2e-5, num_epochs=100, batch_size=4):
+
+    print(f"Starting ESM3 regression for run_{run_id}")
+    
+    data_path = "./dataset/PPI/regression"
+    output_dir = f'./output/regression_lora/run_{run_id}'
+    log_dir = os.path.join(output_dir, 'tensorboard_logs')
+    model_save_dir = os.path.join(output_dir, 'model_checkpoint')
+    train_df, val_df, test_df = load_regression_data(data_path, run_id)
+    
+    train_protein_seqs = train_df['Protein_Sequence'].tolist()
+    train_peptide_seqs = train_df['Peptide_Sequence'].tolist()
+    val_protein_seqs = val_df['Protein_Sequence'].tolist()
+    val_peptide_seqs = val_df['Peptide_Sequence'].tolist()
+    test_protein_seqs = test_df['Protein_Sequence'].tolist()
+    test_peptide_seqs = test_df['Peptide_Sequence'].tolist()
+  
+    train_targets = train_df['pKd'].values
+    val_targets = val_df['pKd'].values
+    test_targets = test_df['pKd'].values
+    
+    train_targets_norm, val_targets_norm, test_targets_norm, scaler = normalize_regression_targets(
+        train_targets, val_targets, test_targets, method='standard'
+    )
+    
+    model = ESM3FinetuneRegressionModel()
+    
+    train_dataset = PPIDataset(train_protein_seqs, train_peptide_seqs, train_targets_norm)
+    val_dataset = PPIDataset(val_protein_seqs, val_peptide_seqs, val_targets_norm)
+    test_dataset = PPIDataset(test_protein_seqs, test_peptide_seqs, test_targets_norm)
+    
+    data_collator = ESMCollator(model.tokenizer)
+    
+    training_args = TrainingArguments(
+        output_dir=model_save_dir,
+        num_train_epochs=num_epochs,
+        per_device_train_batch_size=batch_size,
+        per_device_eval_batch_size=batch_size,
+        weight_decay=0.01,
+        logging_dir=log_dir,
+        logging_steps=100,
+        evaluation_strategy="epoch",
+        save_strategy="epoch",
+        load_best_model_at_end=True,
+        metric_for_best_model="rmse",
+        greater_is_better=False, 
+        learning_rate=learning_rate,
+        # gradient_accumulation_steps=4,
+        save_total_limit=1,
+        remove_unused_columns=False,
+        fp16=True,
+        dataloader_pin_memory=True,
+        dataloader_num_workers=4
+    )
+    
+    trainer = Trainer(
+        model=model,
+        args=training_args,
+        train_dataset=train_dataset,
+        eval_dataset=val_dataset,
+        data_collator=data_collator,
+        compute_metrics=compute_metrics,
+        callbacks=[PersistentEarlyStoppingCallback(early_stopping_patience=5)]
+    )
+    
+    last_checkpoint = get_last_checkpoint(model_save_dir)
+    
+    if last_checkpoint:
+        print(f"Checkpoint found at {last_checkpoint}, resuming training.")
+    else:
+        print("No checkpoint found, starting training from scratch.")
+    
+    trainer.train(resume_from_checkpoint=last_checkpoint)
+    print("Training finished.")
+    
+    test_results = trainer.evaluate(test_dataset)
+    
+    test_predictions = trainer.predict(test_dataset)
+    test_pred_norm = test_predictions.predictions
+    test_pred_original = denormalize_predictions(test_pred_norm, scaler)
+    
+    mse_original = mean_squared_error(test_targets, test_pred_original)
+    rmse_original = np.sqrt(mse_original)
+    mae_original = mean_absolute_error(test_targets, test_pred_original)
+    r2_original = r2_score(test_targets, test_pred_original)
+    pearson_original, _ = pearsonr(test_targets, test_pred_original)
+    spearman_original, _ = spearmanr(test_targets, test_pred_original)
+    
+    medae_original = median_absolute_error(test_targets, test_pred_original)
+    mape_original = mean_absolute_percentage_error(test_targets, test_pred_original)
+    evs_original = explained_variance_score(test_targets, test_pred_original)
+    
+    print(f"ESM3 Regression Run {run_id} Results (Original Scale):")
+    print(f"Test MSE: {mse_original:.3f}")
+    print(f"Test RMSE: {rmse_original:.3f}")
+    print(f"Test MAE: {mae_original:.3f}")
+    print(f"Test MedAE: {medae_original:.3f}") 
+    print(f"Test MAPE: {mape_original:.3f}")    
+    print(f"Test R²: {r2_original:.3f}")
+    print(f"Test EVS: {evs_original:.3f}")      
+    print(f"Test Pearson: {pearson_original:.3f}")
+    print(f"Test Spearman: {spearman_original:.3f}")
+    
+    return {
+        'mse': mse_original,
+        'rmse': rmse_original,
+        'mae': mae_original,
+        'medae': medae_original,
+        'mape': mape_original,    
+        'r2': r2_original,
+        'evs': evs_original,      
+        'pearson': pearson_original,
+        'spearman': spearman_original
+    }
+
+results = train_and_evaluate(1)
