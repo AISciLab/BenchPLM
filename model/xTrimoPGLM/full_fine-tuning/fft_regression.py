@@ -299,3 +299,5 @@ def train_and_evaluate(run_id, model_name='model', learning_rate=2e-5, num_epoch
         'pearson': pearson_original,
         'spearman': spearman_original
     }
+
+results = train_and_evaluate(1)
