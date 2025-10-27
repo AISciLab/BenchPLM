@@ -60,9 +60,9 @@ class AminobertPPIRegressionModel(nn.Module):
         model = BertModel.from_pretrained(pretrained_model_name)
         
         peft_config = LoraConfig(
-            r=8,  # 秩
+            r=8,  
             lora_alpha=16,
-            target_modules=["query", "key", "value","dense"], 
+            target_modules=["query", "key", "value", "dense"], 
             lora_dropout=0.05,
             bias="none"
         )
@@ -143,7 +143,6 @@ class PPIDataset(Dataset):
 def compute_metrics(eval_pred):
     predictions, labels = eval_pred
     
-    # 计算回归指标
     mse = mean_squared_error(labels, predictions)
     rmse = np.sqrt(mse)
     mae = mean_absolute_error(labels, predictions)
@@ -154,7 +153,6 @@ def compute_metrics(eval_pred):
     pearson_corr, _ = pearsonr(labels, predictions)
     spearman_corr, _ = spearmanr(labels, predictions)
     
-    # 返回包含所有指标的字典
     return {
         'mse': mse,
         'rmse': rmse,
@@ -175,7 +173,6 @@ def train_and_evaluate(run_id, learning_rate=1e-5, num_epochs=100, batch_size=32
     log_dir = os.path.join(output_dir, 'tensorboard_logs')
     model_save_dir = os.path.join(output_dir, 'model_checkpoint')
 
-    # 加载数据
     data_path = "./dataset/PPI/regression"
     train_df, val_df, test_df = load_regression_data(data_path, run_id)
     
@@ -238,7 +235,6 @@ def train_and_evaluate(run_id, learning_rate=1e-5, num_epochs=100, batch_size=32
     
     print("Starting training...")
     
-    # 1. 检查是否存在上一个检查点
     last_checkpoint = get_last_checkpoint(model_save_dir)
     
     if last_checkpoint:
@@ -249,15 +245,12 @@ def train_and_evaluate(run_id, learning_rate=1e-5, num_epochs=100, batch_size=32
     trainer.train(resume_from_checkpoint=last_checkpoint)
     print("Training finished.")
     
-    # 在测试集上评估
     test_results = trainer.evaluate(test_dataset)
     
-    # 获取测试集预测结果并反归一化
     test_predictions = trainer.predict(test_dataset)
     test_pred_norm = test_predictions.predictions
     test_pred_original = denormalize_predictions(test_pred_norm, scaler)
     
-    # 计算原始尺度上的指标
     mse_original = mean_squared_error(test_targets, test_pred_original)
     rmse_original = np.sqrt(mse_original)
     mae_original = mean_absolute_error(test_targets, test_pred_original)
@@ -268,7 +261,6 @@ def train_and_evaluate(run_id, learning_rate=1e-5, num_epochs=100, batch_size=32
     mape_original = mean_absolute_percentage_error(test_targets, test_pred_original)
     evs_original = explained_variance_score(test_targets, test_pred_original)
     
-    # 打印所有指标
     print(f"AminoBERT Regression Run {run_id} Results (Original Scale):")
     print(f"Test MSE: {mse_original:.3f}")
     print(f"Test RMSE: {rmse_original:.3f}")
@@ -280,7 +272,6 @@ def train_and_evaluate(run_id, learning_rate=1e-5, num_epochs=100, batch_size=32
     print(f"Test Pearson: {pearson_original:.3f}")
     print(f"Test Spearman: {spearman_original:.3f}")
     
-    # 返回包含所有指标的字典
     return {
         'mse': mse_original,
         'rmse': rmse_original,
