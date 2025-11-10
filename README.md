@@ -2,7 +2,7 @@
 
 ## 📜 Description
 
-We conducts a comprehensive benchmark of various protein language models (PLMs) for peptide property and function prediction. The goal is to assess the effectiveness of PLMs on tasks like peptide–protein affinity, toxicity, hemolytic activity, and multi-functional therapeutic peptide prediction. The models are evaluated under two fine-tuning strategies: Full Fine-Tuning and Low-Rank Adaptation (LoRA).
+Protein language models have emerged as the key paradigms in peptide drug discovery. However, their performance and adaptability remain unexplored. Here, we presented the first benchmark of protein language models for peptide drug discovery. Specifically, to simulate key processes of peptide discovery, we selected multiple databases covering peptide-protein affinity, therapeutic function, toxicity, and hemolytic activity prediction. Subsequently, eight protein language models, whose parameter sizes span from million level to billion level, were evaluated under full fine-tuning, low-rank adaptation (LoRA), and unsupervised visualization paradigms, respectively. Furthermore, we compared the performance of full and LoRA fine-tuning strategies at micro- and macro-scopic levels.
 
 ## ⚙️ Benchmarking pipeline
 
@@ -21,9 +21,17 @@ We used the following public datasets for benchmarking:
 | 💊 [PrMFTP](https://github.com/xialab-ahu/PrMFTP)             | Multi-functional therapeutic peptide prediction |
 
 ## 🤖 Benchmarked models
-- **ESM2**: Lin Z, Akin H, Rao R, et al. Evolutionary-scale prediction of atomic-level protein structure with a language model[J]. Science, 2023, 379(6637): 1123-1130. [paper](https://www.science.org/doi/10.1126/science.ade2574), [code](https://huggingface.co/facebook/esm2_t36_3B_UR50D).
+- **ESM2**: Lin Z, Akin H, Rao R, et al. Evolutionary-scale prediction of atomic-level protein structure with a language model[J]. Science, 2023, 379(6637): 1123-1130. [paper](https://www.science.org/doi/10.1126/science.ade2574
+        
+        
+        
+        ), [code](https://huggingface.co/facebook/esm2_t36_3B_UR50D).
 
-- **ESM3**: Hayes T, Rao R, Akin H, et al. Simulating 500 million years of evolution with a language model[J]. Science, 2025, 387(6736): 850-858. [paper](https://www.science.org/doi/10.1126/science.ads0018), [code](https://huggingface.co/EvolutionaryScale/esm3-sm-open-v1).
+- **ESM3**: Hayes T, Rao R, Akin H, et al. Simulating 500 million years of evolution with a language model[J]. Science, 2025, 387(6736): 850-858. [paper](https://www.science.org/doi/10.1126/science.ads0018
+        
+        
+        
+        ), [code](https://huggingface.co/EvolutionaryScale/esm3-sm-open-v1).
 
 - **xTrimoPGLM**: Chen B, Cheng X, Li P, et al. Xtrimopglm: unified 100-billion-parameter pretrained transformer for deciphering the language of proteins[J]. Nature Methods, 2025: 1-12. [paper](https://www.nature.com/articles/s41592-025-02636-z), [code](https://huggingface.co/biomap-research/proteinglm-3b-mlm).
 
@@ -33,7 +41,11 @@ We used the following public datasets for benchmarking:
 
 - **ProtBert**: Elnaggar A, Heinzinger M, Dallago C, et al. Prottrans: Toward understanding the language of life through self-supervised learning[J]. IEEE transactions on pattern analysis and machine intelligence, 2021, 44(10): 7112-7127. [paper](https://pubmed.ncbi.nlm.nih.gov/34232869/),  [code](https://github.com/agemagician/ProtTrans).
 
-- **OmegaPLM**: Wu R, Ding F, Wang R, et al. High-resolution de novo structure prediction from primary sequence[J]. BioRxiv, 2022: 2022.07. 21.500999. [paper](https://www.biorxiv.org/content/10.1101/2022.07.21.500999v1), [code](https://github.com/HeliXonProtein/OmegaFold).
+- **OmegaPLM**: Wu R, Ding F, Wang R, et al. High-resolution de novo structure prediction from primary sequence[J]. BioRxiv, 2022: 2022.07. 21.500999. [paper](https://www.biorxiv.org/content/10.1101/2022.07.21.500999v1
+        
+        
+        
+        ), [code](https://github.com/HeliXonProtein/OmegaFold).
 
 - **CARP**: Yang K K, Fusi N, Lu A X. Convolutions are competitive with transformers for protein sequence pretraining[J]. Cell Systems, 2024, 15(3): 286-294. e2. [paper](https://doi.org/10.1016/j.cels.2024.01.008), [code](https://github.com/microsoft/protein-sequence-models).
 
