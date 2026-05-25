@@ -1,8 +1,8 @@
-# 🧬BenchPLM: Benchmarking protein language models for peptide property and function prediction
+# 🧬Physicochemical-aware Benchmarks of Protein Language Models for Peptide Lead Discovery
 
 ## 📜 Description
 
-Protein language models have emerged as the key paradigms in peptide drug discovery. However, their performance and adaptability remain unexplored. Here, we presented the first benchmark of protein language models for peptide drug discovery. Specifically, to simulate key processes of peptide discovery, we selected multiple databases covering peptide-protein affinity, therapeutic function, toxicity, and hemolytic activity prediction. Subsequently, eight protein language models, whose parameter sizes span from million level to billion level, were evaluated under full fine-tuning, low-rank adaptation (LoRA), and unsupervised visualization paradigms, respectively. Furthermore, we compared the performance of full and LoRA fine-tuning strategies at micro- and macro-scopic levels.
+Protein language models have emerged as key paradigms for peptide lead discovery by learning evolutionary information. However, their ability to encode the physicochemical factors that govern peptide function and properties remains largely unexplored. Here, we present a physicochemical perspective benchmark to evaluate protein language models for peptide drug discovery. Specifically, to simulate the key processes of peptide discovery, we selected multiple databases covering peptide-protein affinity, therapeutic function, and toxicity prediction. Subsequently, eight protein language models, whose parameter sizes span from the million-level to billion-level, were evaluated under full fine-tuning, low-rank adaptation (LoRA), and unsupervised paradigms, respectively. Furthermore, based on the physicochemical space, we analyzed and compared the performance of full and LoRA fine-tuning strategies, revealing how these mechanisms guide models toward convergent sample spaces with coincident physicochemical distributions.
 
 ## ⚙️ Benchmarking pipeline
 
@@ -17,7 +17,6 @@ We used the following public datasets for benchmarking:
 | 🔗 [PPIKB](https://ppikb.duanlab.ac/) | Peptide–protein affinity |
 | ☠️ [ToxTeller](https://github.com/comics-asiis/ToxicPeptidePrediction/tree/main) | Peptide toxicity prediction             |
 | ☠️ [ToxinPred 3.0](https://webs.iiitd.edu.in/raghava/toxinpred3/) | Peptide toxicity prediction             |
-| 🩸 [HemoPI](https://webs.iiitd.edu.in/raghava/hemopi/) |Hemolytic Peptide identification            |
 | 💊 [PrMFTP](https://github.com/xialab-ahu/PrMFTP)             | Multi-functional therapeutic peptide prediction |
 
 ## 🤖 Benchmarked models
@@ -45,7 +44,6 @@ Make sure that your dataset is stored in the following structure so that scripts
 ```
 BenchPLM/
 ├── dataset/            # This catalog is designed to contain the datasets needed for model. Put it in the same directory where the script you want to run is located.
-│   ├── HemoPI/
 │   ├── PPIKB/
 │   ├── PrMFTP/
 │   ├── Toxinpred3.0/
